@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@^2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@^1"></script>
+</head>
+<body>
+    <div id="loadingIndicator">Loading data...</div>
+    <canvas id="temperatureChart" width="800" height="400"></canvas>
+
+    <script>
+        // Function to retrieve data from PHP script
+        function getData(callback) {
+            document.getElementById('loadingIndicator').style.display = 'block'; // Show loading indicator
+            fetch('get_data.php')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch data');
+                    }
+                    return response.json();
+                })
+                .then(data => callback(data))
+                .catch(error => {
+                    document.getElementById('loadingIndicator').style.display = 'none'; // Hide loading indicator
+                    console.error('Error:', error);
+                    // Handle error (e.g., display error message to user)
+                });
+        }
+
+        // Function to process data and create chart
+        function createChart(data) {
+            const datasets = {};
+
+            data.forEach(entry => {
+                if (!datasets[entry.sensor_name]) {
+                    datasets[entry.sensor_name] = {
+                        label: entry.sensor_name,
+                        data: [],
+                        borderColor: getRandomColor(),
+                        fill: false
+                    };
+                }
+                datasets[entry.sensor_name].data.push({
+                    x: moment(entry.timestamp), // Use moment to parse timestamp
+                    y: entry.sensor_value
+                });
+            });
+
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: Object.values(datasets)
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'time', // Use time scale
+                            time: {
+                                unit: 'minute',
+                                stepSize: 5
+                            }
+                        },
+                        y: {
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Temperature'
+                            }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('loadingIndicator').style.display = 'none'; // Hide loading indicator
+        }
+
+        // Function to generate random color
+        function getRandomColor() {
+            return '#' + Math.floor(Math.random() * 16777215).toString(16);
+        }
+
+        // Retrieve data and create chart
+        getData(createChart);
+    </script>
+</body>
+</html>
