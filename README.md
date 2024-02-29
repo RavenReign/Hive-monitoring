@@ -1,11 +1,11 @@
 ESP32 Dallas Temperature Sensor Data Logger for Honeybee Hives
 Overview
 
-This project is primarily built to track the temperatures inside honeybee hives and log them for analysis. The ESP32 microcontroller interfaces with Dallas Temperature Sensors placed inside the hives to collect temperature data at regular intervals. The collected data is then transmitted to a server for storage and analysis. The server provides a web interface where users can view the temperature data on a multi-line graph and possibly a 3D heat map, allowing for detailed monitoring and analysis of hive conditions over time. Additionally, the system is designed to be deployed offline without internet connectivity, ensuring continuous data collection and monitoring even in remote locations.
+This project is primarily built to track the temperatures inside honeybee hives and log them. The ESP32 microcontroller interfaces with Dallas Temperature Sensors placed inside the hives to collect temperature data at regular intervals. The collected data is then transmitted to a server for storage. The server provides a web interface where users can view the temperature data on a multi-line graph and possibly a 3D heat map, allowing for detailed monitoring and analysis of hive conditions over time. Additionally, the system is designed around being deployed offline without internet connectivity, ensuring continuous data collection and monitoring even in remote locations. (Be aware security is not a focus, please use with care.
 
 Disclaimer!
 
-This project is developed by an individual with limited coding experience who heavily relies on ChatGPT for guidance. The code provided here is tested in a specific environment, and all uploaded code should be assumed to be working unless stated otherwise. Your results may vary depending on your specific setup and configurations.
+This project is developed by an individual with limited coding experience who heavily relies on ChatGPT for guidance. With the occasional human help. The code provided here is tested in a specific environment, and all uploaded code should be assumed to be working unless stated otherwise. Your results may vary depending on your specific setup and configurations.
 
 Usage
 
