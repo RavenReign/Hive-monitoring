@@ -25,10 +25,14 @@ $startTime = isset($_GET['start_time']) ? $_GET['start_time'] : calculateStartTi
 // Calculate start time based on time range
 function calculateStartTime($timeRange) {
     switch ($timeRange) {
+        case '3h':
+            return strtotime('-3 hours');
         case '6h':
             return strtotime('-6 hours');
         case '12h':
             return strtotime('-12 hours');
+        case '24h':
+            return strtotime('-24 hours');
         case '48h':
             return strtotime('-48 hours');
         case '3d':
@@ -65,10 +69,14 @@ $endTime = $startTime + $offset;
 // Function to get time range in seconds
 function getTimeRangeInSeconds($timeRange) {
     switch ($timeRange) {
+        case '3h':
+            return 3 * 3600;
         case '6h':
             return 6 * 3600;
         case '12h':
             return 12 * 3600;
+        case '24h':
+            return 24 * 3600;
         case '48h':
             return 48 * 3600;
         case '3d':
@@ -91,7 +99,7 @@ function getTimeRangeInSeconds($timeRange) {
 }
 
 // SQL query to fetch sensor_name, timestamp, and sensor_value based on start time
-if ($timeRange === '6h' || $timeRange === '12h' || $timeRange === '48h') {
+if ($timeRange === '3h' ||$timeRange === '6h' || $timeRange === '12h' || $timeRange === '24h' ||$timeRange === '48h') {
     // No aggregation for 6 hours, 12 hours, and 48 hours
     $sql = "SELECT sensor_name, timestamp, sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) ORDER BY timestamp";
 } elseif ($timeRange === '3d' || $timeRange === '1w' || $timeRange === '2w') {
@@ -136,8 +144,10 @@ $conn->close();
     <div>
         <label for="timeRangeSelect">Select Time Range:</label>
         <select id="timeRangeSelect" onchange="updateChart()">
+            <option value="3h" <?php if ($timeRange === '3h') echo 'selected'; ?>>3 Hours</option>
             <option value="6h" <?php if ($timeRange === '6h') echo 'selected'; ?>>6 Hours</option>
             <option value="12h" <?php if ($timeRange === '12h') echo 'selected'; ?>>12 Hours</option>
+            <option value="24h" <?php if ($timeRange === '24h') echo 'selected'; ?>>24 Hours</option>
             <option value="48h" <?php if ($timeRange === '48h') echo 'selected'; ?>>48 Hours</option>
             <option value="3d" <?php if ($timeRange === '3d') echo 'selected'; ?>>3 Days</option>
             <option value="1w" <?php if ($timeRange === '1w') echo 'selected'; ?>>1 Week</option>
@@ -149,6 +159,7 @@ $conn->close();
         </select>
         <button onclick="previousData()">Previous</button>
         <button onclick="nextData()">Next</button>
+        <button onclick="toggleLines()">Toggle Lines</button>
     </div>
 
     <div id="loadingIndicator">Loading data...</div>
@@ -160,10 +171,14 @@ $conn->close();
         // Define getTimeRangeInSeconds as a JavaScript function
         function getTimeRangeInSeconds(timeRange) {
             switch (timeRange) {
+                case '3h':
+                    return 3 * 3600;
                 case '6h':
                     return 6 * 3600;
                 case '12h':
                     return 12 * 3600;
+                case '24h':
+                    return 24 * 3600;
                 case '48h':
                     return 48 * 3600;
                 case '3d':
@@ -257,6 +272,15 @@ $conn->close();
             const offset = getTimeRangeInSeconds(selectedRange);
             const startTime = <?php echo $startTime; ?> + offset;
             window.location.href = `?time_range=${selectedRange}&start_time=${startTime}`;
+        }
+        
+        // Function to toggle visibility of all lines
+        function toggleLines() {
+            const chart = Chart.getChart('temperatureChart');
+            chart.data.datasets.forEach(dataset => {
+                dataset.hidden = !dataset.hidden;
+            });
+            chart.update();
         }
 
         // Call createChart function with fetched data
