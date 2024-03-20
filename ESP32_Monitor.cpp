@@ -17,7 +17,7 @@ const char* password = "WIFI PASS"; // Wifi Password
 const char* server = "SERVER IP"; // Server Address
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(115200);  //Comment Serial out if issues using battery powered Seeeduino XIAO
   Serial.println("Hello World!");
   pinMode(SENSOR_POWER_PIN, OUTPUT);
   digitalWrite(SENSOR_POWER_PIN, HIGH); 
@@ -27,7 +27,7 @@ void setup() {
   sensors.setWaitForConversion(false);  // makes it async
   sensors.requestTemperatures();
   sensors.setWaitForConversion(true);
-  delay(2000); // Waiting for sensors to report to controller 
+  delay(1000); // Waiting for sensors to report to controller 
 
   // Check initialization status
   int maxAttempts = 3; // Maximum number of attempts to check initialization status
@@ -77,16 +77,6 @@ void setup() {
   }
 }
 
-void loop() {
-  readAndSendSensorData();
-
-  Serial.println("Tasks Complete.");
-  Serial.println("Going to sleep...");
-  digitalWrite(SENSOR_POWER_PIN, LOW);
-  esp_sleep_enable_timer_wakeup(WAKE_UP_INTERVAL_SECONDS * 1000000);
-  esp_deep_sleep_start();
-}
-
 void connectToWiFi() {
   Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
@@ -107,31 +97,14 @@ void connectToWiFi() {
   }
 }
 
-bool sendDataToServer(String deviceName, String sensorName, float sensorValue) {
-  HTTPClient http;
+void loop() {
+  readAndSendSensorData();
 
-  String url = "http://" + String(server) + "/receive_temp.php";
-  String postData = "device_name=" + deviceName + "&sensor_name=" + sensorName + "&sensor_value=" + String(sensorValue);
-
-  Serial.println("Sending data to server...");
-  Serial.println(postData);
-
-  http.begin(url);
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-  int httpResponseCode = http.POST(postData);
-
-  if (httpResponseCode > 0) {
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    http.end();
-    return true;
-  } else {
-    Serial.print("Error in HTTP request: ");
-    Serial.println(httpResponseCode);
-    http.end();
-    return false;
-  }
+  Serial.println("Tasks Complete.");
+  Serial.println("Going to sleep...");
+  digitalWrite(SENSOR_POWER_PIN, LOW);
+  esp_sleep_enable_timer_wakeup(WAKE_UP_INTERVAL_SECONDS * 1000000);
+  esp_deep_sleep_start();
 }
 
 void readAndSendSensorData() {
@@ -146,6 +119,18 @@ void readAndSendSensorData() {
     tempC = sensors.getTempC(&tempDeviceAddress[0]);
 
     String sensorName = getSensorID(i);
+
+    if (sensorName == "Unknown") {
+      Serial.println("Sensor name is unknown. Attempting re-poll...");
+      delay(250); // Wait 1 second before re-polling
+      tempC = sensors.getTempC(&tempDeviceAddress[0]); // Re-poll the sensor
+      sensorName = getSensorID(i); // Get the sensor name again
+
+      if (sensorName == "Unknown") {
+        Serial.println("Skipping data transmission for sensor with unknown name.");
+        continue; // Skip sending data for this sensor
+      }
+    }
 
     if (tempC > -40 && tempC < 125) {
       String deviceName = DEVICE_NAME;
@@ -174,4 +159,31 @@ String getSensorID(int index) {
   }
 
   return sensorID;
+}
+
+bool sendDataToServer(String deviceName, String sensorName, float sensorValue) {
+  HTTPClient http;
+
+  String url = "http://" + String(server) + "/receive_temp.php";
+  String postData = "device_name=" + deviceName + "&sensor_name=" + sensorName + "&sensor_value=" + String(sensorValue);
+
+  Serial.println("Sending data to server...");
+  Serial.println(postData);
+
+  http.begin(url);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  int httpResponseCode = http.POST(postData);
+
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    http.end();
+    return true;
+  } else {
+    Serial.print("Error in HTTP request: ");
+    Serial.println(httpResponseCode);
+    http.end();
+    return false;
+  }
 }
