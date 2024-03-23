@@ -4,8 +4,8 @@ ini_set('display_errors', 1);
 
 // Your PHP code to retrieve data from the database and display it here
 $servername = "localhost";
-$username = "USERNAME"; // Default username for XAMPP MySQL
-$password = "PASSWORD";     // Default password is empty for XAMPP MySQL
+$username = "root"; // Default username for XAMPP MySQL
+$password = "";     // Default password is empty for XAMPP MySQL
 $dbname = "temperature_db";
 
 // Create connection with default username and password
@@ -98,19 +98,42 @@ function getTimeRangeInSeconds($timeRange) {
     }
 }
 
-// SQL query to fetch sensor_name, timestamp, and sensor_value based on start time
+// Check if the 'device_name' key exists in the $_GET array
+if (isset($_GET['device_name'])) {
+    $deviceName = $_GET['device_name'];
+} else {
+    $deviceName = 'all';
+}
+
+// SQL query to fetch sensor_name, timestamp, and sensor_value based on start time and device name
 if ($timeRange === '3h' ||$timeRange === '6h' || $timeRange === '12h' || $timeRange === '24h' ||$timeRange === '48h') {
     // No aggregation for 6 hours, 12 hours, and 48 hours
-    $sql = "SELECT sensor_name, timestamp, sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) ORDER BY timestamp";
+    if ($deviceName !== 'all') {
+        $sql = "SELECT sensor_name, device_name, timestamp, sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) AND device_name = '$deviceName' ORDER BY timestamp";
+    } else {
+        $sql = "SELECT sensor_name, device_name, timestamp, sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) ORDER BY timestamp";
+    }
 } elseif ($timeRange === '3d' || $timeRange === '1w' || $timeRange === '2w') {
     // 1 hour aggregation for 3 days, 1 week, and 2 weeks
-    $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600)*(3600)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600)*(3600)) ORDER BY timestamp";
+    if ($deviceName !== 'all') {
+        $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600)*(3600)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) AND device_name = '$deviceName' GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600)*(3600)) ORDER BY timestamp";
+    } else {
+        $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600)*(3600)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600)*(3600)) ORDER BY timestamp";
+    }
 } elseif ($timeRange === '1M' || $timeRange === '3M') {
     // 12 hour aggregation for 1 month and 3 months
-    $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*12)*(3600*12)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*12)*(3600*12)) ORDER BY timestamp";
+    if ($deviceName !== 'all') {
+        $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*12)*(3600*12)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) AND device_name = '$deviceName' GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*12)*(3600*12)) ORDER BY timestamp";
+    } else {
+        $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*12)*(3600*12)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*12)*(3600*12)) ORDER BY timestamp";
+    }
 } else {
     // Default 24 hour aggregation
-    $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*24)*(3600*24)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*24)*(3600*24)) ORDER BY timestamp";
+    if ($deviceName !== 'all') {
+        $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*24)*(3600*24)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) AND device_name = '$deviceName' GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*24)*(3600*24)) ORDER BY timestamp";
+    } else {
+        $sql = "SELECT sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*24)*(3600*24)) as timestamp, AVG(sensor_value) as sensor_value FROM temperature_data WHERE timestamp >= FROM_UNIXTIME($startTime) AND timestamp <= FROM_UNIXTIME($endTime) GROUP BY sensor_name, FROM_UNIXTIME(UNIX_TIMESTAMP(timestamp) DIV (3600*24)*(3600*24)) ORDER BY timestamp";
+    }
 }
 
 $result = $conn->query($sql);
@@ -142,6 +165,11 @@ $conn->close();
 </head>
 <body>
     <div>
+		<label for="deviceSelect">Select Device:</label>
+        <select id="deviceSelect" onchange="updateChart()">
+            <option value="all" selected>All Devices</option>
+            <!-- Options for devices will be added dynamically -->
+        </select>
         <label for="timeRangeSelect">Select Time Range:</label>
         <select id="timeRangeSelect" onchange="updateChart()">
             <option value="3h" <?php if ($timeRange === '3h') echo 'selected'; ?>>3 Hours</option>
@@ -166,125 +194,154 @@ $conn->close();
     <canvas id="temperatureChart" width="800" height="400"></canvas>
 	
 	
-
-    <script>
-        // Define getTimeRangeInSeconds as a JavaScript function
-        function getTimeRangeInSeconds(timeRange) {
-            switch (timeRange) {
-                case '3h':
-                    return 3 * 3600;
-                case '6h':
-                    return 6 * 3600;
-                case '12h':
-                    return 12 * 3600;
-                case '24h':
-                    return 24 * 3600;
-                case '48h':
-                    return 48 * 3600;
-                case '3d':
-                    return 3 * 24 * 3600;
-                case '1w':
-                    return 7 * 24 * 3600;
-                case '2w':
-                    return 14 * 24 * 3600;
-                case '1M':
-                    return 30 * 24 * 3600;
-                case '3M':
-                    return 3 * 30 * 24 * 3600;
-                case '6M':
-                    return 6 * 30 * 24 * 3600;
-                case '1y':
-                    return 365 * 24 * 3600;
-                default:
-                    return 0; // Default time range
-            }
+<script>
+    // Define getTimeRangeInSeconds as a JavaScript function
+    function getTimeRangeInSeconds(timeRange) {
+        switch (timeRange) {
+            case '3h':
+                return 3 * 3600;
+            case '6h':
+                return 6 * 3600;
+            case '12h':
+                return 12 * 3600;
+            case '24h':
+                return 24 * 3600;
+            case '48h':
+                return 48 * 3600;
+            case '3d':
+                return 3 * 24 * 3600;
+            case '1w':
+                return 7 * 24 * 3600;
+            case '2w':
+                return 14 * 24 * 3600;
+            case '1M':
+                return 30 * 24 * 3600;
+            case '3M':
+                return 3 * 30 * 24 * 3600;
+            case '6M':
+                return 6 * 30 * 24 * 3600;
+            case '1y':
+                return 365 * 24 * 3600;
+            default:
+                return 0; // Default time range
         }
-		
-        // Parse data fetched from PHP
-        const data = <?php echo json_encode($data); ?>;
+    }
 
-        // Function to process data and create chart
-        function createChart(data) {
-            const datasets = {};
+    // Parse data fetched from PHP
+    const data = <?php echo json_encode($data); ?>;
+    const selectedDevice = '<?php echo $deviceName; ?>'; // Remember the selected device
+    let startTime = <?php echo $startTime; ?>; // Initialize start time
+    const endTime = <?php echo $endTime; ?>; // Get the current end time
 
-            data.forEach(entry => {
-                if (!datasets[entry.sensor_name]) {
-                    datasets[entry.sensor_name] = {
-                        label: entry.sensor_name,
-                        data: [],
-                        borderColor: getRandomColor(),
-                        fill: false
-                    };
-                }
-                datasets[entry.sensor_name].data.push({
-                    x: entry.timestamp,
-                    y: entry.sensor_value
-                });
+    // Function to process data and create chart
+    function createChart(data) {
+        const datasets = {};
+
+        data.forEach(entry => {
+            if (!datasets[entry.sensor_name]) {
+                datasets[entry.sensor_name] = {
+                    label: entry.sensor_name,
+                    data: [],
+                    borderColor: getRandomColor(),
+                    fill: false
+                };
+            }
+            datasets[entry.sensor_name].data.push({
+                x: entry.timestamp,
+                y: entry.sensor_value
             });
+        });
 
-            const ctx = document.getElementById('temperatureChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: Object.values(datasets)
-                },
-                options: {
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {}
-                        },
-                        y: {
-                            scaleLabel: {
-                                display: true,
-                                labelString: 'Temperature'
-                            }
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: Object.values(datasets)
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {}
+                    },
+                    y: {
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Temperature'
                         }
                     }
                 }
-            });
+            }
+        });
 
-            document.getElementById('loadingIndicator').style.display = 'none'; // Hide loading indicator
+        document.getElementById('loadingIndicator').style.display = 'none'; // Hide loading indicator
+    }
+
+    // Function to generate random color
+    function getRandomColor() {
+        return '#' + Math.floor(Math.random() * 16777215).toString(16);
+    }
+
+    // Function to populate device dropdown menu
+    function populateDeviceDropdown(data) {
+        const devices = {};
+        data.forEach(entry => {
+            devices[entry.device_name] = true;
+        });
+        const deviceSelect = document.getElementById('deviceSelect');
+        for (const device in devices) {
+            const option = document.createElement('option');
+            option.value = device;
+            option.textContent = device;
+            deviceSelect.appendChild(option);
         }
 
-        // Function to generate random color
-        function getRandomColor() {
-            return '#' + Math.floor(Math.random() * 16777215).toString(16);
+        // Select the previously selected device
+        if (selectedDevice !== '') {
+            deviceSelect.value = selectedDevice;
         }
+    }
 
-        // Function to update chart based on selected time range
-        function updateChart() {
-            const selectedRange = document.getElementById('timeRangeSelect').value;
-            window.location.href = `?time_range=${selectedRange}`;
-        }
+    // Function to update chart based on selected device and time range
+    function updateChart() {
+        const selectedDevice = document.getElementById('deviceSelect').value;
+        const selectedRange = document.getElementById('timeRangeSelect').value;
+        const offset = getTimeRangeInSeconds(selectedRange);
+        startTime = endTime - offset; // Adjust the start time based on the end time and selected range
+        window.location.href = `?time_range=${selectedRange}&device_name=${selectedDevice}&start_time=${startTime}`;
+    }
 
-        // Function to navigate to previous data
-        function previousData() {
-            const selectedRange = document.getElementById('timeRangeSelect').value;
-            const offset = getTimeRangeInSeconds(selectedRange);
-            const startTime = <?php echo $startTime; ?> - offset;
-            window.location.href = `?time_range=${selectedRange}&start_time=${startTime}`;
-        }
+    // Function to navigate to previous data
+    function previousData() {
+        const selectedRange = document.getElementById('timeRangeSelect').value;
+        const offset = getTimeRangeInSeconds(selectedRange);
+        startTime -= offset;
+        const selectedDevice = document.getElementById('deviceSelect').value;
+        window.location.href = `?time_range=${selectedRange}&start_time=${startTime}&device_name=${selectedDevice}`;
+    }
 
-        // Function to navigate to next data
-        function nextData() {
-            const selectedRange = document.getElementById('timeRangeSelect').value;
-            const offset = getTimeRangeInSeconds(selectedRange);
-            const startTime = <?php echo $startTime; ?> + offset;
-            window.location.href = `?time_range=${selectedRange}&start_time=${startTime}`;
-        }
-        
-        // Function to toggle visibility of all lines
-        function toggleLines() {
-            const chart = Chart.getChart('temperatureChart');
-            chart.data.datasets.forEach(dataset => {
-                dataset.hidden = !dataset.hidden;
-            });
-            chart.update();
-        }
+    // Function to navigate to next data
+    function nextData() {
+        const selectedRange = document.getElementById('timeRangeSelect').value;
+        const offset = getTimeRangeInSeconds(selectedRange);
+        startTime += offset;
+        const selectedDevice = document.getElementById('deviceSelect').value;
+        window.location.href = `?time_range=${selectedRange}&start_time=${startTime}&device_name=${selectedDevice}`;
+    }
 
-        // Call createChart function with fetched data
-        createChart(data);
-    </script>
+    // Function to toggle visibility of all lines
+    function toggleLines() {
+        const chart = Chart.getChart('temperatureChart');
+        chart.data.datasets.forEach(dataset => {
+            dataset.hidden = !dataset.hidden;
+        });
+        chart.update();
+    }
+
+    // Call createChart function with fetched data and populate device dropdown
+    createChart(data);
+    populateDeviceDropdown(data);
+</script>
+
 </body>
 </html>
